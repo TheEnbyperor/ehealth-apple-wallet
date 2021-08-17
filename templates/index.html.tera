@@ -1,0 +1,51 @@
+{% extends "base" %}
+
+{% block head %}
+<style>
+    body {
+        height: 100vh;
+    }
+
+    main {
+        overflow: hidden;
+    }
+
+    main .video {
+        overflow: hidden;
+        flex: 1;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    main .video video {
+        height: 100%;
+        flex-shrink: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h3><a href="/privacy">Privacy information</a></h3>
+<div class="video"><video id="cam-feed"></video></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/qr-scanner.umd.min.js"></script>
+<script>
+    QrScanner.WORKER_PATH = "/static/js/qr-scanner-worker.min.js";
+
+    function onDecode(res) {
+        qr_scanner.stop();
+        window.location = "/qr-data?d=" + encodeURIComponent(res);
+    }
+
+    let qr_scanner = new QrScanner(
+        document.getElementById("cam-feed"),
+        onDecode
+    );
+
+    qr_scanner.start();
+</script>
+{% endblock %}

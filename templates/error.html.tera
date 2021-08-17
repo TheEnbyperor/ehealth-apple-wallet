@@ -1,0 +1,7 @@
+{% extends "base" %}
+
+{% block content %}
+<h1>Error</h1>
+<h2>Invalid/unsupported QR code</h2>
+<h3>{{ error }}</h3>
+{% endblock %}

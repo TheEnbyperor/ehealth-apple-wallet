@@ -1,0 +1,26 @@
+[package]
+name = "ehealth-apple-wallet"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rocket = "<=0.4.7"
+rocket_contrib = { version = "<=0.4.7", features = ["tera_templates", "serve"], default_features = false }
+base45 = "3"
+base64 = "0.13"
+inflate = "0.4"
+coset = "0.1"
+cbor = "0.4"
+serde_derive = "1"
+serde = "1"
+serde_json = "1"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+serde_cbor = { version = "0.11", features = ["tags"] }
+chrono = { version = "0.4", features = ["serde"] }
+lazy_static = "1.4"
+openssl = "0.10"
+zip = "0.5"
+hex = "0.4"
+include_dir = "0.6"

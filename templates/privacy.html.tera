@@ -1,0 +1,30 @@
+{% extends "base" %}
+
+
+{% block head %}
+<style>
+    main {
+        padding: 0 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Privacy</h1>
+<h2>Are my details stored?</h2>
+<p>
+    No. Your source QR code is read and decoded in memory on the server and never persisted to disk.
+    Once the Wallet pass has been downloaded all data is deleted.
+</p>
+
+<h2>Can I see the source code?</h2>
+<p>
+    Absolutely! This service is written in Rust and the source code for it is available on GitHub at
+    <a href="https://github.com/TheEnbyperor/ehealth-apple-wallet">github.com/TheEnbyperor/ehealth-apple-wallet</a>.
+</p>
+
+<h2>Questions or concerns?</h2>
+<p>
+    You can contact me at <a href="mailto:q@magicalcodewit.ch">q@magicalcodewit.ch</a>.
+</p>
+{% endblock %}

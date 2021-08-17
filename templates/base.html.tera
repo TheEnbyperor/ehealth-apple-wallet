@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Covid Pass Apple Wallet</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: #eee;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        a {
+            color: #333;
+            text-decoration-style: dashed;
+        }
+
+        footer {
+            padding: 25px;
+            background: #222;
+            color: #eee;
+            text-align: center;
+        }
+
+        header {
+            padding: 25px;
+            text-align: center;
+            background: #ffcd00;
+        }
+
+        main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+<header>
+    <h1>Covid Pass Apple Wallet Packager</h1>
+    <h2>By <a href="https://magicalcodewit.ch">Q</a></h2>
+</header>
+<main>
+    {% block content %}{% endblock %}
+</main>
+<footer>
+    <p>
+        <small>&copy; 2021 Q (q@magicalcodewit.ch)</small>
+    </p>
+</footer>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

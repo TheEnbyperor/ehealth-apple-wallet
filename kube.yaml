@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ehealth-apple-wallet
+  namespace: q-personal
+  labels:
+    app: ehealth-apple-wallet
+    part: rocket
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ehealth-apple-wallet
+      part: rocket
+  template:
+    metadata:
+      annotations:
+         cni.projectcalico.org/ipv6pools: "[\"default-ipv6-ippool\"]"
+      labels:
+        app: ehealth-apple-wallet
+        part: rocket
+    spec:
+      volumes:
+        - name: signing-keys
+          secret:
+            secretName: ehealth-apple-wallet-signing-keys
+      containers:
+        - name: nginx
+          image: theenbyperor/ehealth-apple-wallet:1
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: signing-keys
+              readOnly: true
+              mountPath: "/priv"
+          env:
+            - name: ROCKET_ADDRESS
+              value: "::"
+            - name: ROCKET_TEMPLATE_DIR
+              value: "/templates/"
+          ports:
+            - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ehealth-apple-wallet
+  namespace: q-personal
+  labels:
+    app: ehealth-apple-wallet
+    part: rocket
+spec:
+  selector:
+    app: ehealth-apple-wallet
+    part: rocket
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: rocket
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ehealth-apple-wallet
+  namespace: q-personal
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    cert-manager.io/cluster-issuer: letsencrypt
+spec:
+  tls:
+    - hosts:
+        - ehealth-apple-wallet.magicalcodewit.ch
+      secretName: ehealth-apple-wallet-tls
+  rules:
+  - host: ehealth-apple-wallet.magicalcodewit.ch
+    http: &http
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ehealth-apple-wallet
+            port:
+              number: 8000
