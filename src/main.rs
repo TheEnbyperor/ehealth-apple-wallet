@@ -61,6 +61,8 @@ lazy_static! {
     static ref VALUE_SET_VACCINE_MANUFACTURER: ValueSet = serde_json::from_str(VALUE_SET_VACCINE_MANUFACTURER_STR).unwrap();
     static ref VALUE_SET_VACCINE_PRODUCT: ValueSet = serde_json::from_str(VALUE_SET_VACCINE_PRODUCT_STR).unwrap();
     static ref VALUE_SET_VACCINE_PROPHYLAXIS: ValueSet = serde_json::from_str(VALUE_SET_VACCINE_PROPHYLAXIS_STR).unwrap();
+
+    static ref TR_HES_REGEX: regex::Regex = regex::Regex::new(r"^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\|[\w\d]{4}-?[\w\d]{4}-?[\w\d]{2}$").unwrap();
 }
 
 #[derive(Debug, Deserialize)]
@@ -560,6 +562,118 @@ fn ehealth_payload_to_pkpass(payload: EHealthPayload, msg: String) -> Result<PKP
     })
 }
 
+fn turkey_payload_to_pkpass(msg: String) -> Result<PKPass, &'static str> {
+    let serial = match msg.strip_prefix("https://covidasidogrulama.saglik.gov.tr/api/CovidAsiKartiDogrula?Guid=") {
+        Some(s) => s,
+        None => return Err("invalid payload")
+    };
+
+    let barcode = PKPassBarcode {
+        alt_text: None,
+        format: PKBarcodeFormat::QR,
+        message: msg.clone(),
+        message_encoding: "iso-8859-1".to_string(),
+    };
+
+    Ok(PKPass {
+        format_version: 1,
+        description: "Turkey vaccination certificate".to_string(),
+        org_name: "Government of Turkey".to_string(),
+        type_id: PASS_TYPE_ID.to_string(),
+        serial: serial.to_string(),
+        team_id: PASS_TEAM_ID.to_string(),
+        voided: false,
+        pass_style: PKPassStyle::Generic(PKPassStructure {
+            aux_fields: vec![],
+            back_fields: vec![PKPassField {
+                data_detectors: Some(vec![
+                    PKDataDetector::Link
+                ]),
+                key: "vc".to_string(),
+                label: Some("View certificate".to_string()),
+                value: msg,
+                ..Default::default()
+            }],
+            header_fields: vec![PKPassField {
+                data_detectors: Some(vec![]),
+                key: "tg".to_string(),
+                label: Some("For".to_string()),
+                value: "COVID-19".to_string(),
+                ..Default::default()
+            }],
+            primary_fields: vec![PKPassField {
+                data_detectors: Some(vec![]),
+                key: "iss".to_string(),
+                label: Some("Issued by".to_string()),
+                value: "Government of Turkey".to_string(),
+                ..Default::default()
+            }],
+            secondary_fields: vec![],
+        }),
+        bg_colour: Some("rgb(185, 232, 234)".to_string()),
+        fg_colour: Some("rgb(0, 0, 0)".to_string()),
+        label_colour: Some("rgb(27, 182, 193)".to_string()),
+        logo_text: Some("Vaccination".to_string()),
+        web_service_url: None,
+        authentication_token: None,
+        exp_date: None,
+        barcode: Some(barcode.clone()),
+        barcodes: vec![barcode],
+    })
+}
+
+fn turkey_hes_payload_to_pkpass(msg: String) -> Result<PKPass, &'static str> {
+    let hes_code = match msg.split_once("|") {
+        Some(s) => s.1,
+        None => return Err("invalid payload")
+    };
+
+    let barcode = PKPassBarcode {
+        alt_text: None,
+        format: PKBarcodeFormat::QR,
+        message: msg.clone(),
+        message_encoding: "iso-8859-1".to_string(),
+    };
+
+    Ok(PKPass {
+        format_version: 1,
+        description: "Turkey HES certificate".to_string(),
+        org_name: "Government of Turkey".to_string(),
+        type_id: PASS_TYPE_ID.to_string(),
+        serial: hes_code.to_string(),
+        team_id: PASS_TEAM_ID.to_string(),
+        voided: false,
+        pass_style: PKPassStyle::Generic(PKPassStructure {
+            aux_fields: vec![],
+            back_fields: vec![],
+            header_fields: vec![],
+            primary_fields: vec![PKPassField {
+                data_detectors: Some(vec![]),
+                key: "hes".to_string(),
+                label: Some("Code".to_string()),
+                value: format!("{}-{}-{}", &hes_code[0..4], &hes_code[4..8], &hes_code[8..]),
+                ..Default::default()
+            }],
+            secondary_fields: vec![PKPassField {
+                data_detectors: Some(vec![]),
+                key: "iss".to_string(),
+                label: Some("Issued by".to_string()),
+                value: "Government of Turkey".to_string(),
+                ..Default::default()
+            }],
+        }),
+        bg_colour: Some("rgb(90, 168, 0)".to_string()),
+        fg_colour: Some("rgb(255, 255, 255)".to_string()),
+        label_colour: Some("rgb(255, 87, 34)".to_string()),
+        logo_text: Some("HES Code".to_string()),
+        web_service_url: None,
+        authentication_token: None,
+        exp_date: None,
+        barcode: Some(barcode.clone()),
+        barcodes: vec![barcode],
+    })
+}
+
 struct PKPassSigningKeys {
     public_cert: openssl::x509::X509,
     private_key: openssl::pkey::PKey<openssl::pkey::Private>,
@@ -950,7 +1064,7 @@ fn qr_data(
     signing_certs: rocket::State<PassSigningCerts>,
     pass_signing_keys: rocket::State<PKPassSigningKeys>,
 ) -> Result<PKPassResponse, rocket_contrib::templates::Template> {
-    if d.starts_with("HC1:") {
+    let pkpass = if d.starts_with("HC1:") {
         let hc_data_deflated = match base45::decode(&d[4..]) {
             Ok(d) => d,
             Err(e) => {
@@ -1063,7 +1177,7 @@ fn qr_data(
             }
         }
 
-        let pkpass = match ehealth_payload_to_pkpass(payload, d) {
+        match ehealth_payload_to_pkpass(payload, d) {
             Ok(p) => p,
             Err(e) => {
                 println!("Unable to create pkpass: {}", e);
@@ -1071,24 +1185,44 @@ fn qr_data(
                     error: "Invalid pass"
                 }));
             }
-        };
-
-        let pkpass_bytes = match sign_pkpass(&pkpass, &pass_signing_keys) {
-            Ok(d) => d,
+        }
+    } else if d.starts_with("https://covidasidogrulama.saglik.gov.tr/api/CovidAsiKartiDogrula") {
+        match turkey_payload_to_pkpass(d) {
+            Ok(p) => p,
             Err(e) => {
-                println!("Can't encode pass: {}", e);
+                println!("Unable to create pkpass: {}", e);
                 return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
-                    error: "Unable to generate pass"
+                    error: "Invalid pass"
                 }));
             }
-        };
+        }
+    } else if TR_HES_REGEX.is_match(&d) {
+        match turkey_hes_payload_to_pkpass(d) {
+            Ok(p) => p,
+            Err(e) => {
+                println!("Unable to create pkpass: {}", e);
+                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                    error: "Invalid pass"
+                }));
+            }
+        }
+    } else {
+        return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+            error: "Not an eHealth QR code"
+        }));
+    };
 
-        return Ok(PKPassResponse(pkpass_bytes));
-    }
+    let pkpass_bytes = match sign_pkpass(&pkpass, &pass_signing_keys) {
+        Ok(d) => d,
+        Err(e) => {
+            println!("Can't encode pass: {}", e);
+            return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                error: "Unable to generate pass"
+            }));
+        }
+    };
 
-    Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
-        error: "Not an eHealth QR code"
-    }))
+    Ok(PKPassResponse(pkpass_bytes))
 }
 
 fn main() {

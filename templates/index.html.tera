@@ -32,20 +32,16 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/qr-scanner.umd.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
 <script>
-    QrScanner.WORKER_PATH = "/static/js/qr-scanner-worker.min.js";
+    window.addEventListener('load', function () {
+        const codeReader = new ZXing.BrowserMultiFormatReader();
 
-    function onDecode(res) {
-        qr_scanner.stop();
-        window.location = "/qr-data?d=" + encodeURIComponent(res);
-    }
-
-    let qr_scanner = new QrScanner(
-        document.getElementById("cam-feed"),
-        onDecode
-    );
-
-    qr_scanner.start();
+        codeReader.listVideoInputDevices().then(function (videoInputDevices) {
+            codeReader.decodeOnceFromVideoDevice(videoInputDevices[0].deviceId, "cam-feed").then(function (result) {
+                window.location = "/qr-data?d=" + encodeURIComponent(result.text);
+            })
+        })
+    })
 </script>
 {% endblock %}
