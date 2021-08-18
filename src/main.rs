@@ -132,6 +132,8 @@ struct PKPass {
     web_service_url: Option<String>,
     #[serde(rename = "authenticationToken", skip_serializing_if = "Option::is_none")]
     authentication_token: Option<String>,
+    #[serde(rename = "sharingProhibited", skip_serializing_if = "Option::is_none")]
+    sharing_prohibited: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     barcode: Option<PKPassBarcode>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -523,6 +525,7 @@ fn ehealth_payload_to_pkpass(payload: EHealthPayload, msg: String) -> Result<PKP
         serial,
         team_id: PASS_TEAM_ID.to_string(),
         voided: false,
+        sharing_prohibited: Some(true),
         pass_style: PKPassStyle::Generic(PKPassStructure {
             aux_fields,
             back_fields,
@@ -583,6 +586,7 @@ fn turkey_payload_to_pkpass(msg: String) -> Result<PKPass, &'static str> {
         serial: serial.to_string(),
         team_id: PASS_TEAM_ID.to_string(),
         voided: false,
+        sharing_prohibited: Some(true),
         pass_style: PKPassStyle::Generic(PKPassStructure {
             aux_fields: vec![],
             back_fields: vec![PKPassField {
@@ -643,6 +647,7 @@ fn turkey_hes_payload_to_pkpass(msg: String) -> Result<PKPass, &'static str> {
         serial: hes_code.to_string(),
         team_id: PASS_TEAM_ID.to_string(),
         voided: false,
+        sharing_prohibited: Some(true),
         pass_style: PKPassStyle::Generic(PKPassStructure {
             aux_fields: vec![],
             back_fields: vec![],

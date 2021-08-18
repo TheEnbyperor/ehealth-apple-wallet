@@ -37,10 +37,8 @@
     window.addEventListener('load', function () {
         const codeReader = new ZXing.BrowserMultiFormatReader();
 
-        codeReader.listVideoInputDevices().then(function (videoInputDevices) {
-            codeReader.decodeOnceFromVideoDevice(videoInputDevices[0].deviceId, "cam-feed").then(function (result) {
-                window.location = "/qr-data?d=" + encodeURIComponent(result.text);
-            })
+        codeReader.decodeOnceFromVideoDevice(null, "cam-feed").then(function (result) {
+            window.location = "/qr-data?d=" + encodeURIComponent(result.text);
         })
     })
 </script>
