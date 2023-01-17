@@ -3,5 +3,6 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/ehn-dcc-schema" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/eu-dcc-valuesets" vcs="Git" />
   </component>
 </project>

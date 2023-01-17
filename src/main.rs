@@ -1,4 +1,4 @@
-#![feature(decl_macro, str_split_once)]
+#![feature(decl_macro)]
 
 #[macro_use]
 extern crate rocket;
@@ -15,14 +15,14 @@ use serde::Deserializer;
 use std::fmt::Formatter;
 use std::io::Write;
 
-const VALUE_SET_COUNTRY_CODE_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/country-2-codes.json");
-const VALUE_SET_DISEASE_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/disease-agent-targeted.json");
-const VALUE_SET_TEST_MANUFACTURER_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/test-manf.json");
-const VALUE_SET_TEST_RESULT_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/test-result.json");
-const VALUE_SET_TEST_TYPE_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/test-type.json");
-const VALUE_SET_VACCINE_MANUFACTURER_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/vaccine-mah-manf.json");
-const VALUE_SET_VACCINE_PRODUCT_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/vaccine-medicinal-product.json");
-const VALUE_SET_VACCINE_PROPHYLAXIS_STR: &'static str = include_str!("../ehn-dcc-schema/valuesets/vaccine-prophylaxis.json");
+const VALUE_SET_COUNTRY_CODE_STR: &'static str = include_str!("../eu-dcc-valuesets/country-2-codes.json");
+const VALUE_SET_DISEASE_STR: &'static str = include_str!("../eu-dcc-valuesets/disease-agent-targeted.json");
+const VALUE_SET_TEST_MANUFACTURER_STR: &'static str = include_str!("../eu-dcc-valuesets/test-manf.json");
+const VALUE_SET_TEST_RESULT_STR: &'static str = include_str!("../eu-dcc-valuesets/test-result.json");
+const VALUE_SET_TEST_TYPE_STR: &'static str = include_str!("../eu-dcc-valuesets/test-type.json");
+const VALUE_SET_VACCINE_MANUFACTURER_STR: &'static str = include_str!("../eu-dcc-valuesets/vaccine-mah-manf.json");
+const VALUE_SET_VACCINE_PRODUCT_STR: &'static str = include_str!("../eu-dcc-valuesets/vaccine-medicinal-product.json");
+const VALUE_SET_VACCINE_PROPHYLAXIS_STR: &'static str = include_str!("../eu-dcc-valuesets/vaccine-prophylaxis.json");
 
 const UK_CERT_URL: &'static str = "https://covid-status.service.nhsx.nhs.uk/pubkeys/keys.json";
 
@@ -748,12 +748,12 @@ fn sign_pkpass(pass: &PKPass, signing_keys: &PKPassSigningKeys) -> Result<Vec<u8
 
 struct PKPassResponse(Vec<u8>);
 
-impl<'r> rocket::response::Responder<'r> for PKPassResponse {
-    fn respond_to(self, _req: &rocket::request::Request<'_>) -> rocket::response::Result<'r> {
+impl<'r, 'o: 'r> rocket::response::Responder<'r, 'o> for PKPassResponse {
+    fn respond_to(self, _req: &'r rocket::request::Request<'_>) -> rocket::response::Result<'o> {
         rocket::Response::build()
             .header(rocket::http::ContentType::new("application", "vnd.apple.pkpass"))
             .raw_header("Content-Disposition", "attachment; filename=\"ehealth.pkpass\"")
-            .sized_body(std::io::Cursor::new(self.0))
+            .sized_body(self.0.len(), std::io::Cursor::new(self.0))
             .ok()
     }
 }
@@ -1049,13 +1049,13 @@ impl<'de> serde::Deserialize<'de> for EHealthPayload {
 }
 
 #[get("/")]
-fn index() -> rocket_contrib::templates::Template {
-    rocket_contrib::templates::Template::render("index", std::collections::HashMap::<(), ()>::new())
+fn index() -> rocket_dyn_templates::Template {
+    rocket_dyn_templates::Template::render("index", std::collections::HashMap::<(), ()>::new())
 }
 
 #[get("/privacy")]
-fn privacy() -> rocket_contrib::templates::Template {
-    rocket_contrib::templates::Template::render("privacy", std::collections::HashMap::<(), ()>::new())
+fn privacy() -> rocket_dyn_templates::Template {
+    rocket_dyn_templates::Template::render("privacy", std::collections::HashMap::<(), ()>::new())
 }
 
 #[derive(Debug, Serialize)]
@@ -1066,15 +1066,15 @@ struct ErrorInfo {
 #[get("/qr-data?<d>")]
 fn qr_data(
     d: String,
-    signing_certs: rocket::State<PassSigningCerts>,
-    pass_signing_keys: rocket::State<PKPassSigningKeys>,
-) -> Result<PKPassResponse, rocket_contrib::templates::Template> {
+    signing_certs: &rocket::State<PassSigningCerts>,
+    pass_signing_keys: &rocket::State<PKPassSigningKeys>,
+) -> Result<PKPassResponse, rocket_dyn_templates::Template> {
     let pkpass = if d.starts_with("HC1:") {
         let hc_data_deflated = match base45::decode(&d[4..]) {
             Ok(d) => d,
             Err(e) => {
                 println!("Can't decode Base45: {}", e);
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "Invalid Base45"
                 }));
             }
@@ -1083,7 +1083,7 @@ fn qr_data(
             Ok(d) => d,
             Err(e) => {
                 println!("Can't decode DEFLATE: {}", e);
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "Invalid DEFLATE encoding"
                 }));
             }
@@ -1093,7 +1093,7 @@ fn qr_data(
             Ok(d) => d,
             Err(e) => {
                 println!("Can't decode COSE: {}", e);
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "Invalid COSE data"
                 }));
             }
@@ -1103,7 +1103,7 @@ fn qr_data(
             Some(d) => d,
             None => {
                 println!("No COSE payload");
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "No payload in COSE data"
                 }));
             }
@@ -1113,7 +1113,7 @@ fn qr_data(
             Ok(d) => d,
             Err(e) => {
                 println!("Can't decode payload: {}", e);
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "Invalid payload"
                 }));
             }
@@ -1129,7 +1129,7 @@ fn qr_data(
                 Some(d) => d,
                 None => {
                     println!("No known signing key");
-                    return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                    return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                         error: "Signed by an unknown key"
                     }));
                 }
@@ -1175,7 +1175,7 @@ fn qr_data(
                 Ok(_) => {}
                 Err(e) => {
                     println!("Signature verification failed: {}", e);
-                    return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                    return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                         error: "Invalid signature"
                     }));
                 }
@@ -1186,7 +1186,7 @@ fn qr_data(
             Ok(p) => p,
             Err(e) => {
                 println!("Unable to create pkpass: {}", e);
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "Invalid pass"
                 }));
             }
@@ -1196,7 +1196,7 @@ fn qr_data(
             Ok(p) => p,
             Err(e) => {
                 println!("Unable to create pkpass: {}", e);
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "Invalid pass"
                 }));
             }
@@ -1206,13 +1206,13 @@ fn qr_data(
             Ok(p) => p,
             Err(e) => {
                 println!("Unable to create pkpass: {}", e);
-                return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+                return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                     error: "Invalid pass"
                 }));
             }
         }
     } else {
-        return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+        return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
             error: "Not an eHealth QR code"
         }));
     };
@@ -1221,7 +1221,7 @@ fn qr_data(
         Ok(d) => d,
         Err(e) => {
             println!("Can't encode pass: {}", e);
-            return Err(rocket_contrib::templates::Template::render("error", ErrorInfo {
+            return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
                 error: "Unable to generate pass"
             }));
         }
@@ -1230,7 +1230,8 @@ fn qr_data(
     Ok(PKPassResponse(pkpass_bytes))
 }
 
-fn main() {
+#[rocket::launch]
+fn rocket() -> _ {
     let uk_certs: Vec<UKSigningCert> = reqwest::blocking::get(UK_CERT_URL)
         .expect("Unable to download UK signing certs")
         .json()
@@ -1263,13 +1264,12 @@ fn main() {
         intermediate_certs,
     };
 
-    rocket::ignite()
-        .attach(rocket_contrib::templates::Template::fairing())
+    rocket::build()
+        .attach(rocket_dyn_templates::Template::fairing())
         .manage(signing_certs)
         .manage(signing_keys)
-        .mount("/static", rocket_contrib::serve::StaticFiles::from("./static"))
+        .mount("/static", rocket::fs::FileServer::from("./static"))
         .mount("/", routes![
             index, qr_data, privacy
         ])
-        .launch();
 }
