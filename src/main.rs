@@ -1079,7 +1079,7 @@ fn qr_data(
                 }));
             }
         };
-        let hc_data = match inflate::inflate_bytes_zlib(&hc_data_deflated) {
+        let hc_data = match inflate::inflate_bytes(&hc_data_deflated) {
             Ok(d) => d,
             Err(e) => {
                 println!("Can't decode DEFLATE: {}", e);

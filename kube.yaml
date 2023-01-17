@@ -26,7 +26,7 @@ spec:
             secretName: ehealth-apple-wallet-signing-keys
       containers:
         - name: nginx
-          image: theenbyperor/ehealth-apple-wallet:5
+          image: theenbyperor/ehealth-apple-wallet:7
           imagePullPolicy: Always
           volumeMounts:
             - name: signing-keys
