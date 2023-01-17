@@ -25,14 +25,14 @@ const VALUE_SET_VACCINE_MANUFACTURER_STR: &'static str = include_str!("../eu-dcc
 const VALUE_SET_VACCINE_PRODUCT_STR: &'static str = include_str!("../eu-dcc-valuesets/vaccine-medicinal-product.json");
 const VALUE_SET_VACCINE_PROPHYLAXIS_STR: &'static str = include_str!("../eu-dcc-valuesets/vaccine-prophylaxis.json");
 
-const UK_CERT_URL: &'static str = "https://covid-status.service.nhsx.nhs.uk/pubkeys/keys.json";
+//const UK_CERT_URL: &'static str = "https://covid-status.service.nhsx.nhs.uk/pubkeys/keys.json";
 
 const PASS_TYPE_ID: &'static str = "pass.ch.magicalcodewit.pass.covid";
 const PASS_TEAM_ID: &'static str = "MQ9TN9772U";
 
 const PASS_ASSETS: include_dir::Dir = include_dir!("./pass-assets");
 
-const VERIFIABLE_COUNTRIES: [&'static str; 1] = ["GB"];
+const VERIFIABLE_COUNTRIES: [&'static str; 0] = [];
 
 #[derive(Debug, Deserialize)]
 struct ValueSet {
@@ -1235,21 +1235,21 @@ fn qr_data(
 
 #[rocket::launch]
 fn rocket() -> _ {
-    let uk_certs: Vec<UKSigningCert> = reqwest::blocking::get(UK_CERT_URL)
-        .expect("Unable to download UK signing certs")
-        .json()
-        .expect("Unable to decode UK signing certs");
+    // let uk_certs: Vec<UKSigningCert> = reqwest::blocking::get(UK_CERT_URL)
+    //     .expect("Unable to download UK signing certs")
+    //     .json()
+    //     .expect("Unable to decode UK signing certs");
 
     let mut signing_certs = PassSigningCerts(std::collections::HashMap::new());
 
-    for cert in uk_certs {
-        signing_certs.0.insert(PassSigningCertKey {
-            iss: "GB".to_string(),
-            kid: cert.kid,
-        }, PassSigningCert {
-            pkey: openssl::pkey::PKey::from_ec_key(cert.public_key).unwrap()
-        });
-    }
+    // for cert in uk_certs {
+    //     signing_certs.0.insert(PassSigningCertKey {
+    //         iss: "GB".to_string(),
+    //         kid: cert.kid,
+    //     }, PassSigningCert {
+    //         pkey: openssl::pkey::PKey::from_ec_key(cert.public_key).unwrap()
+    //     });
+    // }
 
     let mut intermediate_certs = openssl::stack::Stack::new().unwrap();
 
