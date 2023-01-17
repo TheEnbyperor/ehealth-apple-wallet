@@ -14,6 +14,7 @@ use chrono::prelude::*;
 use serde::Deserializer;
 use std::fmt::Formatter;
 use std::io::Write;
+use std::io::Read;
 
 const VALUE_SET_COUNTRY_CODE_STR: &'static str = include_str!("../eu-dcc-valuesets/country-2-codes.json");
 const VALUE_SET_DISEASE_STR: &'static str = include_str!("../eu-dcc-valuesets/disease-agent-targeted.json");
@@ -1079,8 +1080,10 @@ fn qr_data(
                 }));
             }
         };
-        let hc_data = match inflate::inflate_bytes(&hc_data_deflated) {
-            Ok(d) => d,
+        let mut deflater = flate2::read::ZlibDecoder::new(&hc_data_deflated[..]);
+        let mut hc_data = Vec::new();
+        match deflater.read_to_end(&mut hc_data) {
+            Ok(_) => {},
             Err(e) => {
                 println!("Can't decode DEFLATE: {}", e);
                 return Err(rocket_dyn_templates::Template::render("error", ErrorInfo {
