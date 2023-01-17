@@ -282,7 +282,7 @@ fn strip_uvci(uvci: &str) -> &str {
 fn ehealth_payload_to_pkpass(payload: EHealthPayload, msg: String) -> Result<PKPass, &'static str> {
     let serial = match &payload.hcert.eu_dgc_v1.group {
         EUDigitalGreenCertGroup::Vaccination(v) => match v.first() {
-            Some(d) => format!("V:{}", strip_uvci(&d.id)),
+            Some(d) => format!("V:{}:{}:{}", strip_uvci(&d.id), d.dose, d.series),
             None => return Err("invalid payload")
         },
         EUDigitalGreenCertGroup::Test(t) => match t.first() {
